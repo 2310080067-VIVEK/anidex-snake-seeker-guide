@@ -45,6 +45,23 @@ const snakeOptions: SnakeData[] = [
     distribution: 'South and Southeast Asia, including India, southern China, and the Philippines.'
   },
   {
+    name: 'Black Mamba',
+    scientificName: 'Dendroaspis polylepis',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Black_mamba_head.jpg',
+    venomType: 'Neurotoxic',
+    antidote: 'Black Mamba Antivenin (Polyvalent)',
+    precautions: [
+      'Seek immediate emergency medical care - extremely urgent',
+      'Keep victim calm and minimize movement',
+      'Immobilize the bitten limb',
+      'Do not apply tourniquet or try to suck out venom',
+      'Monitor vital signs until emergency services arrive'
+    ],
+    threatLevel: 'deadly',
+    description: 'The black mamba is one of Africa\'s most dangerous and feared snakes. Despite its name, the skin is usually olive, brownish, or grayish with a matte finish. It is named for the ink-black inside of its mouth. It is extremely fast and highly venomous.',
+    distribution: 'Sub-Saharan Africa, including parts of Ethiopia, Somalia, Kenya, Tanzania, and southern Africa.'
+  },
+  {
     name: 'Garter Snake',
     scientificName: 'Thamnophis sirtalis',
     image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Coast_Garter_Snake.jpg/1200px-Coast_Garter_Snake.jpg',
@@ -84,6 +101,18 @@ const IdentifyPage = () => {
         
         // Combine the two factors to select a snake
         const index = (fileHash + firstChar) % snakeOptions.length;
+        
+        // For demo purposes: if name contains "black" or "mamba", return Black Mamba
+        const lowerFileName = fileName.toLowerCase();
+        if (lowerFileName.includes('black') || lowerFileName.includes('mamba')) {
+          // Find the Black Mamba index
+          const blackMambaIndex = snakeOptions.findIndex(
+            snake => snake.name === 'Black Mamba'
+          );
+          if (blackMambaIndex !== -1) {
+            return setTimeout(() => resolve(blackMambaIndex), 2000);
+          }
+        }
         
         // Simulate API delay
         setTimeout(() => {
