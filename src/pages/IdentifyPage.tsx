@@ -7,8 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SnakeData } from '@/components/identify/SnakeResult';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { identifySnake } from '@/services/snakeIdentificationService';
+import { Loader2 } from 'lucide-react';
 
-// Define multiple snake data options for more realistic simulation
+// Define multiple snake data options for the database
 const snakeOptions: SnakeData[] = [
   {
     name: 'Eastern Diamondback Rattlesnake',
@@ -81,63 +83,55 @@ const snakeOptions: SnakeData[] = [
 const IdentifyPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [identifiedSnake, setIdentifiedSnake] = useState<SnakeData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [modelLoading, setModelLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleImageSelect = (file: File) => {
-    // In a real application, this would send the image to a backend API
+  const handleImageSelect = async (file: File) => {
     setIsProcessing(true);
+    setError(null);
+    setModelLoading(true);
     
-    // Get a simulated match based on the file size/properties
-    // This is just a simulation - in a real app this would be ML-based detection
-    const simulateImageAnalysis = async (file: File): Promise<number> => {
-      return new Promise((resolve) => {
-        // Create a simple hash based on file properties to simulate image analysis
-        const fileSize = file.size;
-        const fileName = file.name;
-        
-        // Use file size and first character of filename to create pseudo-random choice
-        const fileHash = fileSize % 3;
-        const firstChar = fileName.charAt(0).toLowerCase().charCodeAt(0) % 3;
-        
-        // Combine the two factors to select a snake
-        const index = (fileHash + firstChar) % snakeOptions.length;
-        
-        // For demo purposes: if name contains "black" or "mamba", return Black Mamba
-        const lowerFileName = fileName.toLowerCase();
-        if (lowerFileName.includes('black') || lowerFileName.includes('mamba')) {
-          // Find the Black Mamba index
-          const blackMambaIndex = snakeOptions.findIndex(
-            snake => snake.name === 'Black Mamba'
-          );
-          if (blackMambaIndex !== -1) {
-            return setTimeout(() => resolve(blackMambaIndex), 2000);
-          }
-        }
-        
-        // Simulate API delay
-        setTimeout(() => {
-          resolve(index);
-        }, 2000);
-      });
-    };
-    
-    // Simulate the image analysis process
-    simulateImageAnalysis(file).then(snakeIndex => {
-      setIsProcessing(false);
-      
-      // Get a snake option based on the simulated analysis
-      const selectedSnake = snakeOptions[snakeIndex];
-      setIdentifiedSnake(selectedSnake);
-      
+    try {
       toast({
-        title: 'Snake Identified',
-        description: `We identified this as a ${selectedSnake.name}.`,
+        title: 'Processing Image',
+        description: 'Analyzing your snake image...',
       });
-    });
+      
+      // Real identification using ML model
+      const result = await identifySnake(file, snakeOptions);
+      
+      if (result) {
+        setIdentifiedSnake(result);
+        toast({
+          title: 'Snake Identified',
+          description: `We identified this as ${result.name}.`,
+        });
+      } else {
+        setError("We couldn't identify a snake in this image. Please try another image or use the 'Describe a Snake' feature.");
+        toast({
+          title: 'Identification Failed',
+          description: "We couldn't identify a snake in this image.",
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Snake identification error:', err);
+      setError("There was an error processing your image. Please try again.");
+      toast({
+        title: 'Error',
+        description: 'There was an error processing your image.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+      setModelLoading(false);
+    }
   };
   
   const handleReset = () => {
     setIdentifiedSnake(null);
+    setError(null);
   };
 
   return (
@@ -153,6 +147,19 @@ const IdentifyPage = () => {
 
           {!identifiedSnake ? (
             <div className="bg-secondary/30 rounded-lg p-6">
+              {error && (
+                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-md">
+                  <p className="text-destructive">{error}</p>
+                </div>
+              )}
+              
+              {modelLoading && (
+                <div className="mb-4 flex items-center justify-center p-4">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <p>Loading identification model...</p>
+                </div>
+              )}
+              
               <ImageUpload 
                 onImageSelect={handleImageSelect}
                 isProcessing={isProcessing}
