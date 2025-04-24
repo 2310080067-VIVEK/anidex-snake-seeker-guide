@@ -33,7 +33,7 @@ const IdentifyPage = () => {
           'Keep the affected limb below heart level',
           'Remove any constrictive items (rings, watches)',
           'Do not apply tourniquet or try to suck out venom',
-          'Try to remember the snake's appearance for identification'
+          'Try to remember the snake\'s appearance for identification', // Fixed: Added escape character
         ],
         threatLevel: 'deadly',
         description: 'The Eastern diamondback rattlesnake is the largest venomous snake in North America. It has a distinctive pattern of diamond-shaped markings along its back with brown and yellow borders and a rattle at the end of its tail.',
