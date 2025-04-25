@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import SnakeDescription from '@/components/identify/SnakeDescription';
 import SnakeResult from '@/components/identify/SnakeResult';
+import RegionalSnakes from '@/components/identify/RegionalSnakes';
 import type { SnakeData } from '@/components/identify/SnakeResult';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getLocationDetails } from '@/services/geocodingService';
+import { getSnakesByLocation } from '@/services/snakeLocationService';
 
 const DescribePage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [identifiedSnake, setIdentifiedSnake] = useState<SnakeData | null>(null);
+  const [regionalSnakes, setRegionalSnakes] = useState<SnakeData[]>([]);
+  const [location, setLocation] = useState<string>('');
+  const [isLoadingRegionalSnakes, setIsLoadingRegionalSnakes] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = (
@@ -64,17 +71,57 @@ const DescribePage = () => {
         title: 'Snake Identified',
         description: 'We found a potential match based on your description.',
       });
+      
+      // Save the location for regional snakes
+      setLocation(location);
+      
+      // If coordinates are available, fetch regional snakes
+      if (coordinates) {
+        fetchRegionalSnakes(coordinates.latitude, coordinates.longitude);
+      }
     }, 1500);
+  };
+  
+  const fetchRegionalSnakes = async (latitude: number, longitude: number) => {
+    try {
+      setIsLoadingRegionalSnakes(true);
+      
+      // Get detailed location information
+      const locationDetails = await getLocationDetails(latitude, longitude);
+      
+      // Get snakes for this region
+      const snakes = await getSnakesByLocation(
+        locationDetails.country, 
+        locationDetails.state
+      );
+      
+      setRegionalSnakes(snakes);
+      
+      toast({
+        title: 'Regional Snake Data Loaded',
+        description: `Found ${snakes.length} species common to ${locationDetails.country}.`,
+      });
+    } catch (error) {
+      console.error('Error fetching regional snakes:', error);
+      toast({
+        title: 'Error Loading Regional Data',
+        description: 'Could not fetch snake data for your region.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingRegionalSnakes(false);
+    }
   };
   
   const handleReset = () => {
     setIdentifiedSnake(null);
+    setRegionalSnakes([]);
   };
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <header className="mb-6 text-center">
             <h1 className="text-3xl font-bold">Describe a Snake</h1>
             <p className="text-muted-foreground mt-2">
@@ -90,12 +137,24 @@ const DescribePage = () => {
               />
             </div>
           ) : (
-            <div className="bg-secondary/30 rounded-lg p-6">
-              <SnakeResult 
-                snake={identifiedSnake}
-                onReset={handleReset}
-              />
-            </div>
+            <>
+              <div className="bg-secondary/30 rounded-lg p-6 mb-8">
+                <SnakeResult 
+                  snake={identifiedSnake}
+                  onReset={handleReset}
+                />
+              </div>
+              
+              {regionalSnakes.length > 0 && (
+                <div className="bg-secondary/30 rounded-lg p-6">
+                  <RegionalSnakes 
+                    snakes={regionalSnakes}
+                    locationName={location}
+                    isLoading={isLoadingRegionalSnakes}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {!identifiedSnake && !isProcessing && (
