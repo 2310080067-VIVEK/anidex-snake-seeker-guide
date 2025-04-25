@@ -34,7 +34,7 @@ export const identifySnake = async (
       classifierInstance = await pipeline(
         'image-classification',
         'malachy-liu/mobilenet-v1-animal-detector',
-        { device: 'cpu', quantized: true }
+        { device: 'cpu' } // Removed the 'quantized' property that was causing the error
       );
       console.log('Classifier initialized successfully');
     }
