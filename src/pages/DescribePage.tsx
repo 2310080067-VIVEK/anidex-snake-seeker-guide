@@ -1,19 +1,22 @@
-
 import React, { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import SnakeDescription from '@/components/identify/SnakeDescription';
 import SnakeResult from '@/components/identify/SnakeResult';
 import type { SnakeData } from '@/components/identify/SnakeResult';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const DescribePage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [identifiedSnake, setIdentifiedSnake] = useState<SnakeData | null>(null);
   const { toast } = useToast();
 
-  const handleSubmit = (description: string, location: string) => {
-    // In a real application, this would send the data to a backend API
+  const handleSubmit = (
+    description: string, 
+    location: string, 
+    coordinates?: { latitude: number; longitude: number }
+  ) => {
+    // In a real application, this would send the data (including coordinates) to a backend API
     setIsProcessing(true);
     
     // Simulate API call

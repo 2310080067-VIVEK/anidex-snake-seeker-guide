@@ -1,42 +1,76 @@
 
 import React, { useState } from 'react';
-import { Search, Loader2, MapPin } from 'lucide-react';
+import { Search, Loader2, MapPin, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { reverseGeocode, type GeocodingResult } from '@/services/geocodingService';
 
 interface SnakeDescriptionProps {
-  onSubmit: (description: string, location: string) => void;
+  onSubmit: (description: string, location: string, coordinates?: { latitude: number; longitude: number }) => void;
   isProcessing: boolean;
 }
 
 const SnakeDescription: React.FC<SnakeDescriptionProps> = ({ onSubmit, isProcessing }) => {
   const [description, setDescription] = useState<string>('');
   const [location, setLocation] = useState<string>('');
-  
+  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const { toast } = useToast();
+
+  const handleGetCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Location Not Available',
+        description: 'Geolocation is not supported by your browser',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoadingLocation(true);
+    setLocationStatus('idle');
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      const result: GeocodingResult = await reverseGeocode(latitude, longitude);
+      
+      setLocation(result.address);
+      setCoordinates(result.coordinates);
+      setLocationStatus('success');
+      
+      toast({
+        title: 'Location Captured',
+        description: 'Your location has been successfully added',
+      });
+    } catch (error) {
+      console.error('Location error:', error);
+      setLocationStatus('error');
+      toast({
+        title: 'Location Error',
+        description: 'Could not access your location. Please enter it manually.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (description.trim() && location.trim()) {
-      onSubmit(description, location);
-    }
-  };
-  
-  const handleGetCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            // In a real app, we would use a reverse geocoding API
-            setLocation('Your current location');
-          } catch (error) {
-            console.error('Error getting location:', error);
-          }
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-        }
-      );
+      onSubmit(description, location, coordinates || undefined);
     }
   };
 
@@ -92,16 +126,37 @@ const SnakeDescription: React.FC<SnakeDescriptionProps> = ({ onSubmit, isProcess
             placeholder="Enter city, region, or country..."
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            disabled={isProcessing}
+            disabled={isProcessing || isLoadingLocation}
             className="flex-1"
           />
           <Button 
             type="button" 
             variant="outline" 
             onClick={handleGetCurrentLocation}
-            disabled={isProcessing}
+            disabled={isProcessing || isLoadingLocation}
+            className="min-w-[120px] relative"
           >
-            <MapPin size={16} />
+            {isLoadingLocation ? (
+              <>
+                <Loader2 size={16} className="animate-spin mr-2" />
+                Loading...
+              </>
+            ) : locationStatus === 'success' ? (
+              <>
+                <CheckCircle2 size={16} className="mr-2 text-green-500" />
+                Located
+              </>
+            ) : locationStatus === 'error' ? (
+              <>
+                <XCircle size={16} className="mr-2 text-destructive" />
+                Retry
+              </>
+            ) : (
+              <>
+                <MapPin size={16} className="mr-2" />
+                Use My Location
+              </>
+            )}
           </Button>
         </div>
       </div>
