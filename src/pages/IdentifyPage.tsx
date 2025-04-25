@@ -8,7 +8,8 @@ import type { SnakeData } from '@/components/identify/SnakeResult';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { identifySnake } from '@/services/snakeIdentificationService';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Define multiple snake data options for the database
 const snakeOptions: SnakeData[] = [
@@ -85,6 +86,7 @@ const IdentifyPage = () => {
   const [identifiedSnake, setIdentifiedSnake] = useState<SnakeData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modelLoading, setModelLoading] = useState(false);
+  const [modelLoadingStep, setModelLoadingStep] = useState('');
   const { toast } = useToast();
 
   const handleImageSelect = async (file: File) => {
@@ -93,10 +95,20 @@ const IdentifyPage = () => {
     setModelLoading(true);
     
     try {
+      // Set loading steps to provide better feedback
+      setModelLoadingStep('Loading AI model components');
+      
       toast({
         title: 'Processing Image',
-        description: 'Analyzing your snake image...',
+        description: 'Analyzing your snake image with computer vision...',
       });
+      
+      // Short timeout to allow the UI to update with loading indicators
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setModelLoadingStep('Preparing image analysis');
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setModelLoadingStep('Identifying snake characteristics');
       
       // Real identification using ML model
       const result = await identifySnake(file, snakeOptions);
@@ -126,6 +138,7 @@ const IdentifyPage = () => {
     } finally {
       setIsProcessing(false);
       setModelLoading(false);
+      setModelLoadingStep('');
     }
   };
   
@@ -141,22 +154,30 @@ const IdentifyPage = () => {
           <header className="mb-6 text-center">
             <h1 className="text-3xl font-bold">Snake Identification</h1>
             <p className="text-muted-foreground mt-2">
-              Upload an image of a snake for instant identification
+              Upload an image of a snake for AI-powered identification
             </p>
           </header>
 
           {!identifiedSnake ? (
             <div className="bg-secondary/30 rounded-lg p-6">
               {error && (
-                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-md">
+                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-md flex items-center gap-3">
+                  <AlertTriangle className="text-destructive h-5 w-5" />
                   <p className="text-destructive">{error}</p>
                 </div>
               )}
               
               {modelLoading && (
-                <div className="mb-4 flex items-center justify-center p-4">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <p>Loading identification model...</p>
+                <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-md">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <p className="text-primary font-medium">{modelLoadingStep}</p>
+                  </div>
+                  
+                  <div className="mt-3 space-y-2">
+                    <Skeleton className="h-2 w-3/4" />
+                    <Skeleton className="h-2 w-1/2" />
+                  </div>
                 </div>
               )}
               

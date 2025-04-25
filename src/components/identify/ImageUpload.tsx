@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Camera, Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { Progress } from '@/components/ui/progress';
 
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
@@ -14,6 +15,29 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImageSelect, isProcessing }
   const [dragActive, setDragActive] = useState<boolean>(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [processingProgress, setProcessingProgress] = useState(0);
+
+  // Simulate progress for AI model loading when processing
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isProcessing) {
+      setProcessingProgress(0);
+      interval = setInterval(() => {
+        setProcessingProgress(prev => {
+          // Go up to 95% only - the final 5% will happen when actually complete
+          const next = prev + (100 - prev) * 0.1;
+          return next > 95 ? 95 : next;
+        });
+      }, 300);
+    } else {
+      setProcessingProgress(isProcessing ? 100 : 0);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,10 +164,18 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImageSelect, isProcessing }
             className="w-full aspect-video object-cover" 
           />
           {isProcessing ? (
-            <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-4">
+            <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center p-6">
+              <div className="flex flex-col items-center gap-4 w-full max-w-md">
                 <Loader2 size={40} className="animate-spin text-primary" />
-                <p className="text-lg font-medium">Analyzing image...</p>
+                <p className="text-lg font-medium text-center">
+                  Analyzing snake features with AI...
+                </p>
+                <div className="w-full">
+                  <Progress value={processingProgress} className="h-2" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Examining scales, patterns, coloration and head shape...
+                </p>
               </div>
             </div>
           ) : (
